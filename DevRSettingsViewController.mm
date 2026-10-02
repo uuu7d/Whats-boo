@@ -1,14 +1,25 @@
-#import "DevRSettingsViewController.h"
+#import <UIKit/UIKit.h>
+#import <Preferences/PSListController.h>
 #import <Preferences/PSSpecifier.h>
 #import <CoreLocation/CoreLocation.h>
 #import <MapKit/MapKit.h>
 
-@interface DevRSettingsViewController () <MKMapViewDelegate>
+// ====== تعريف الواجهة مباشرة لتفادي الحاجة لملف .h منفصل ======
+@interface DevRSettingsViewController : PSListController <MKMapViewDelegate>
 @property (nonatomic, strong) MKMapView *mapView;
 @property (nonatomic, strong) UISwitch *locationSpoofSwitch;
 @property (nonatomic, strong) UISwitch *hideChatsSwitch;
 @property (nonatomic, strong) NSArray *fontsList;
 @property (nonatomic, strong) NSString *selectedFont;
+@end
+
+// ====== واجهة كلاس الإعدادات ======
+@interface DevLandSettings : NSObject
++ (instancetype)shared;
+@property (assign, nonatomic) BOOL fakeLocationEnabled;
+@property (assign, nonatomic) CLLocationCoordinate2D customLocation;
+@property (strong, nonatomic) NSString *currentFont;
+@property (assign, nonatomic) BOOL chatsHidden;
 @end
 
 @implementation DevRSettingsViewController
@@ -17,7 +28,7 @@
     if (!_specifiers) {
         NSMutableArray *specifiers = [NSMutableArray new];
         
-‎        // ====== قسم تزييف الموقع ======
+        // ====== قسم تزييف الموقع ======
         PSSpecifier *locationGroup = [PSSpecifier groupSpecifierWithName:@"إعدادات الموقع"];
         [specifiers addObject:locationGroup];
         
@@ -38,10 +49,10 @@
                                       detail:nil
                                       cell:PSLinkCell
                                       edit:nil];
-        mapSpecifier.buttonAction = @selector(showMapView);
+        [mapSpecifier setProperty:NSStringFromSelector(@selector(showMapView)) forKey:@"action"];
         [specifiers addObject:mapSpecifier];
         
-‎        // ====== قسم إدارة المحادثات ======
+        // ====== قسم إدارة المحادثات ======
         PSSpecifier *chatsGroup = [PSSpecifier groupSpecifierWithName:@"إدارة المحادثات"];
         [specifiers addObject:chatsGroup];
         
@@ -64,7 +75,7 @@
                                      edit:nil];
         [specifiers addObject:gestureInfo];
         
-‎        // ====== قسم المظهر ======
+        // ====== قسم المظهر ======
         PSSpecifier *appearanceGroup = [PSSpecifier groupSpecifierWithName:@"المظهر"];
         [specifiers addObject:appearanceGroup];
         
@@ -85,7 +96,7 @@
     return _specifiers;
 }
 
-‎// ====== عرض خريطة تحديد الموقع ======
+// ====== عرض خريطة تحديد الموقع ======
 - (void)showMapView {
     UIViewController *mapVC = [UIViewController new];
     mapVC.title = @"حدد موقعك المزيف";
@@ -95,7 +106,10 @@
     self.mapView.showsUserLocation = YES;
     self.mapView.userInteractionEnabled = YES;
     
-‎    // إضافة زر التحديد
+    UILongPressGestureRecognizer *longPress = [[UILongPressGestureRecognizer alloc] initWithTarget:self action:@selector(handleLongPress:)];
+    longPress.minimumPressDuration = 0.5;
+    [self.mapView addGestureRecognizer:longPress];
+    
     UIButton *confirmButton = [UIButton buttonWithType:UIButtonTypeSystem];
     [confirmButton setTitle:@"تأكيد الموقع" forState:UIControlStateNormal];
     [confirmButton addTarget:self action:@selector(confirmLocation) forControlEvents:UIControlEventTouchUpInside];
@@ -110,36 +124,48 @@
     [self.navigationController pushViewController:mapVC animated:YES];
 }
 
-- (void)mapView:(MKMapView *)mapView didSelectAnnotationView:(MKAnnotationView *)view {
-    if ([view.annotation isKindOfClass:[MKUserLocation class]]) return;
-    [mapView removeAnnotation:view.annotation];
-}
-
-- (void)mapView:(MKMapView *)mapView didLongPressAtCoordinate:(CLLocationCoordinate2D)coordinate {
-    [mapView removeAnnotations:mapView.annotations];
-    
-    MKPointAnnotation *annotation = [MKPointAnnotation new];
-    annotation.coordinate = coordinate;
-    annotation.title = @"الموقع المزيف";
-    [mapView addAnnotation:annotation];
+- (void)handleLongPress:(UILongPressGestureRecognizer *)gestureRecognizer {
+    if (gestureRecognizer.state == UIGestureRecognizerStateBegan) {
+        CGPoint touchPoint = [gestureRecognizer locationInView:self.mapView];
+        CLLocationCoordinate2D coordinate = [self.mapView convertPoint:touchPoint toCoordinateFromView:self.mapView];
+        
+        NSMutableArray *toRemove = [NSMutableArray new];
+        for (id<MKAnnotation> ann in self.mapView.annotations) {
+            if ([ann isKindOfClass:[MKPointAnnotation class]]) {
+                [toRemove addObject:ann];
+            }
+        }
+        [self.mapView removeAnnotations:toRemove];
+        
+        MKPointAnnotation *annotation = [MKPointAnnotation new];
+        annotation.coordinate = coordinate;
+        annotation.title = @"الموقع المزيف";
+        [self.mapView addAnnotation:annotation];
+    }
 }
 
 - (void)confirmLocation {
-    if (self.mapView.annotations.count > 1) {
-        MKPointAnnotation *annotation = self.mapView.annotations[1];
-        [[DevLandSettings shared] setCustomLocation:annotation.coordinate];
+    MKPointAnnotation *selectedAnnotation = nil;
+    for (id<MKAnnotation> annotation in self.mapView.annotations) {
+        if ([annotation isKindOfClass:[MKPointAnnotation class]]) {
+            selectedAnnotation = (MKPointAnnotation *)annotation;
+            break;
+        }
+    }
+    
+    if (selectedAnnotation) {
+        [[DevLandSettings shared] setCustomLocation:selectedAnnotation.coordinate];
         
-‎        // حفظ في Preferences
         NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
-        [defaults setDouble:annotation.coordinate.latitude forKey:@"fakeLocationLat"];
-        [defaults setDouble:annotation.coordinate.longitude forKey:@"fakeLocationLng"];
+        [defaults setDouble:selectedAnnotation.coordinate.latitude forKey:@"fakeLocationLat"];
+        [defaults setDouble:selectedAnnotation.coordinate.longitude forKey:@"fakeLocationLng"];
         [defaults synchronize];
         
         [self.navigationController popViewControllerAnimated:YES];
     }
 }
 
-‎// ====== إدارة التفضيلات ======
+// ====== إدارة التفضيلات ======
 - (id)readPreferenceValue:(PSSpecifier*)specifier {
     NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
     NSString *key = specifier.properties[@"key"];
@@ -179,20 +205,18 @@
     return [[DevLandSettings shared] currentFont] ?: @"ArialArabic-Bold";
 }
 
-‎// ====== إعداد الواجهة ======
+// ====== إعداد الواجهة ======
 - (void)viewDidLoad {
     [super viewDidLoad];
     
     self.title = @"إعدادات ديف لاند";
     self.navigationController.navigationBar.tintColor = [UIColor systemBlueColor];
     
-‎    // تحميل القيم المحفوظة
     NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
     [[DevLandSettings shared] setFakeLocationEnabled:[defaults boolForKey:@"enableLocationSpoof"]];
     [[DevLandSettings shared] setChatsHidden:[defaults boolForKey:@"hideChats"]];
     [[DevLandSettings shared] setCurrentFont:[defaults stringForKey:@"selectedFont"] ?: @"ArialArabic-Bold"];
     
-‎    // تحميل الموقع المحفوظ
     CLLocationCoordinate2D savedLoc;
     savedLoc.latitude = [defaults doubleForKey:@"fakeLocationLat"] ?: 24.7136;
     savedLoc.longitude = [defaults doubleForKey:@"fakeLocationLng"] ?: 46.6753;
