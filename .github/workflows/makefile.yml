@@ -38,5 +38,5 @@ jobs:
       - name: Upload .dylib Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: WelcomeOverlay-DYLIB
-          path: .theos/obj/WelcomeOverlay.dylib
+          name: DevlandUltimate-DYLIB
+          path: .theos/obj/*.dylib
