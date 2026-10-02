@@ -13,7 +13,6 @@ DevlandUltimate_FILES = \
     Tweak.xm \
     DevRSettingsViewController.mm \
     DevLandSettings.m \
-    DevLandCache.m
 
 DevlandUltimate_FRAMEWORKS = \
     UIKit \
