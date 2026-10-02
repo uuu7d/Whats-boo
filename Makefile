@@ -2,7 +2,6 @@
 ARCHS = arm64 arm64e
 TARGET = iphone:clang:latest:14.0
 INSTALL_TARGET_PROCESSES = WhatsApp
-SYSROOT = $(THEOS)/sdks/iPhoneOS14.5.sdk
 
 include $(THEOS)/makefiles/common.mk
 
@@ -33,10 +32,6 @@ DevlandUltimate_CFLAGS = \
     -I.
 
 include $(THEOS_MAKE_PATH)/tweak.mk
-
-# ====== Subprojects ======
-SUBPROJECTS += devlandprefs
-include $(THEOS_MAKE_PATH)/aggregate.mk
 
 # ====== Post Install ======
 after-install::
