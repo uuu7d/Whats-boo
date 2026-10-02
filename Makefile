@@ -21,8 +21,7 @@ DevlandUltimate_FRAMEWORKS = \
     WebKit
 
 DevlandUltimate_PRIVATE_FRAMEWORKS = \
-    ContactsUI \
-    ChatKit
+    ContactsUI
 
 DevlandUltimate_CFLAGS = \
     -fobjc-arc \
