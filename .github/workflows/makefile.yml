@@ -1,15 +1,42 @@
-name: Build
-on: [push]
+name: Build Theos Tweak
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
+
     steps:
-      - uses: actions/checkout@v4
-      - name: Install dependencies
-        run: sudo apt-get install autoconf automake  # إذا كنت تستخدم Autotools
-      - name: Generate configure
-        run: autoreconf -i
-      - name: Run configure
-        run: ./configure
-      - name: Build
-        run: make
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Setup Theos, SDKs & ldid
+        run: |
+          # 1. تثبيت أداة التوقيع ldid
+          brew install ldid
+          
+          # 2. تنزيل بيئة Theos
+          git clone --recursive https://github.com/theos/theos.git ${{ github.workspace }}/theos
+          
+          # 3. تنزيل حزم الـ SDKs
+          rm -rf ${{ github.workspace }}/theos/sdks
+          git clone --depth=1 https://github.com/theos/sdks.git ${{ github.workspace }}/theos/sdks
+
+      - name: Build Tweak Binary (.dylib)
+        env:
+          THEOS: ${{ github.workspace }}/theos
+        run: |
+          make FINALPACKAGE=1
+
+      - name: Upload .dylib Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: WelcomeOverlay-DYLIB
+          path: .theos/obj/WelcomeOverlay.dylib
