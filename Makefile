@@ -21,7 +21,6 @@ DevlandUltimate_FRAMEWORKS = \
     WebKit
 
 DevlandUltimate_PRIVATE_FRAMEWORKS = \
-    Preferences \
     ContactsUI \
     ChatKit
 
@@ -30,6 +29,9 @@ DevlandUltimate_CFLAGS = \
     -Wno-deprecated-declarations \
     -Wno-unsupported-availability-guard \
     -I.
+
+DevlandUltimate_LDFLAGS = \
+    -undefined dynamic_lookup
 
 include $(THEOS_MAKE_PATH)/tweak.mk
 
