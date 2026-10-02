@@ -2,7 +2,7 @@
 ARCHS = arm64 arm64e
 TARGET = iphone:clang:latest:14.0
 INSTALL_TARGET_PROCESSES = WhatsApp
-DEPLOYMENT_IOS = 13.0
+SYSROOT = $(THEOS)/sdks/iPhoneOS14.5.sdk
 
 include $(THEOS)/makefiles/common.mk
 
@@ -12,28 +12,25 @@ TWEAK_NAME = DevlandUltimate
 DevlandUltimate_FILES = \
     Tweak.xm \
     DevRSettingsViewController.mm \
-    DevLandSettings.m \
+    DevLandSettings.m
 
 DevlandUltimate_FRAMEWORKS = \
     UIKit \
     Contacts \
     CoreLocation \
     MapKit \
-    WebKit \
-    Preferences
+    WebKit
 
 DevlandUltimate_PRIVATE_FRAMEWORKS = \
+    Preferences \
     ContactsUI \
     ChatKit
 
 DevlandUltimate_CFLAGS = \
     -fobjc-arc \
     -Wno-deprecated-declarations \
-    -Wno-unsupported-availability-guard
-
-DevlandUltimate_EXTRA_FRAMEWORKS = \
-    Cephei \
-    CepheiPrefs
+    -Wno-unsupported-availability-guard \
+    -I.
 
 include $(THEOS_MAKE_PATH)/tweak.mk
 
