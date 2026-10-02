@@ -4,25 +4,25 @@
 #import <MapKit/MapKit.h>
 #import <WebKit/WebKit.h>
 
-‎// ====== إعدادات التهيئة ======
+// ====== إعدادات التهيئة ======
 #define DEBUG_MODE 1                // وضع التصحيح
 #define ENABLE_LOCATION_SPOOF 1     // تزييف الموقع
 #define ENABLE_NUMBER_LOOKUP 1      // بحث الأرقام
 #define ENABLE_HIDE_CHATS 1         // إخفاء المحادثات
 #define ENABLE_CUSTOM_FONTS 1       // الخطوط المخصصة
 
-‎// ====== بيانات الاختبار ======
+// ====== بيانات الاختبار ======
 static NSDictionary *testNumbers = @{
     @"966501234567": @{@"name": @"محمد أحمد (تجربة)", @"carrier": @"STC"},
     @"966502345678": @{@"name": @"شركة النهدي (تجربة)", @"carrier": @"موبايلي"}
 };
 
 static NSDictionary *savedLocations = @{
-‎    @"الرياض": @{@"lat": @24.7136, @"lng": @46.6753},
-‎    @"جدة": @{@"lat": @21.5433, @"lng": @39.1728}
+    @"الرياض": @{@"lat": @24.7136, @"lng": @46.6753},
+    @"جدة": @{@"lat": @21.5433, @"lng": @39.1728}
 };
 
-‎// ====== الفئات المخصصة ======
+// ====== الفئات المخصصة والواجهات ======
 @interface DevLandSettings : NSObject
 + (instancetype)shared;
 @property (assign, nonatomic) BOOL fakeLocationEnabled;
@@ -31,7 +31,18 @@ static NSDictionary *savedLocations = @{
 @property (assign, nonatomic) BOOL chatsHidden;
 @end
 
-‎// ====== التنفيذ الرئيسي ======
+@interface WAChatViewController : UIViewController
+@end
+
+@interface WAContactCell : UITableViewCell
+@property (nonatomic, strong) NSString *phoneNumber;
+- (void)setupLookupButton;
+- (void)devLand_handleLookup;
+- (void)saveTestContact:(NSString *)name number:(NSString *)number;
+- (void)sendLocation;
+@end
+
+// ====== التنفيذ الرئيسي ======
 %hook WAChatViewController
 
 // MARK: - إخفاء المحادثات
@@ -58,6 +69,7 @@ static NSDictionary *savedLocations = @{
     #endif
 }
 
+%new
 - (void)setupLookupButton {
     static UIButton *btn;
     if (!btn) {
@@ -69,6 +81,7 @@ static NSDictionary *savedLocations = @{
     }
 }
 
+%new
 - (void)devLand_handleLookup {
     NSString *number = [[self.phoneNumber componentsSeparatedByCharactersInSet:
                        [[NSCharacterSet decimalDigitCharacterSet] invertedSet]] 
@@ -87,7 +100,13 @@ static NSDictionary *savedLocations = @{
     
     [alert addAction:[UIAlertAction actionWithTitle:@"إلغاء" style:UIAlertActionStyleCancel handler:nil]];
     
-    [[UIApplication sharedApplication].keyWindow.rootViewController presentViewController:alert animated:YES completion:nil];
+    UIViewController *rootVC = [UIApplication sharedApplication].keyWindow.rootViewController;
+    [rootVC presentViewController:alert animated:YES completion:nil];
+}
+
+%new
+- (void)saveTestContact:(NSString *)name number:(NSString *)number {
+    NSLog(@"[DevLand] حفظ جهة اتصال تجريبية: %@ - %@", name, number);
 }
 
 // MARK: - تزييف الموقع
@@ -96,7 +115,7 @@ static NSDictionary *savedLocations = @{
     if ([DevLandSettings shared].fakeLocationEnabled) {
         CLLocationCoordinate2D fakeLoc = [DevLandSettings shared].customLocation;
         
-‎        // هنا كود إرسال الموقع المزيف
+        // هنا كود إرسال الموقع المزيف
         NSLog(@"[DevLand] إرسال موقع مزيف: (%f, %f)", fakeLoc.latitude, fakeLoc.longitude);
         
         return; // لا ترسل الموقع الحقيقي
@@ -121,11 +140,11 @@ static NSDictionary *savedLocations = @{
 %end
 #endif
 
-‎// ====== الإعدادات والتهيئة ======
+// ====== الإعدادات والتهيئة ======
 %ctor {
     NSLog(@"[DevLand] تم تحميل التويك بنجاح!");
     
-‎    // تهيئة الإعدادات الافتراضية
+    // تهيئة الإعدادات الافتراضية
     [DevLandSettings shared].fakeLocationEnabled = YES;
     [DevLandSettings shared].customLocation = CLLocationCoordinate2DMake(24.7136, 46.6753);
     [DevLandSettings shared].currentFont = @"ArialArabic-Bold";
